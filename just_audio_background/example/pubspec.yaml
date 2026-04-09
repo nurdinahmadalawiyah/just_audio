@@ -9,7 +9,7 @@ dependencies:
   flutter:
     sdk: flutter
   audio_session: ^0.1.7
-  rxdart: ^0.27.2
+  rxdart: ^0.28.0
   just_audio:
     path: ../../just_audio
   just_audio_background:
