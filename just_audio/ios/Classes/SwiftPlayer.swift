@@ -352,11 +352,36 @@ extension SwiftPlayer {
     }
 
     func onSetShuffleOrder(request: [String: Any?]) throws {
-        guard let shuffleOrder = request["shuffleOrder"] as? [Int] else {
+        if let shuffleOrder = request["shuffleOrder"] as? [Int] {
+            try player.shuffle(at: 0, inOrder: shuffleOrder)
             return
         }
 
-        try player.shuffle(at: 0, inOrder: shuffleOrder)
+        guard let audioSource = request["audioSource"] as? [String: Any?] else {
+            return
+        }
+
+        if let shuffleOrder = extractShuffleOrder(from: audioSource) {
+            try player.shuffle(at: 0, inOrder: shuffleOrder)
+        }
+    }
+
+    private func extractShuffleOrder(from audioSource: [String: Any?]) -> [Int]? {
+        guard let type = audioSource["type"] as? String else {
+            return nil
+        }
+
+        switch type {
+        case "concatenating":
+            return audioSource["shuffleOrder"] as? [Int]
+        case "looping", "clipping":
+            guard let child = audioSource["child"] as? [String: Any?] else {
+                return nil
+            }
+            return extractShuffleOrder(from: child)
+        default:
+            return nil
+        }
     }
 
     func onAudioEffectSetEnabled(_ request: [String: Any]) throws {
