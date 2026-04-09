@@ -130,16 +130,10 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
         let outputFrames: UInt32 = 4096
         let pcmBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: outputFrames)!
         
-        var outputBufferList = AudioBufferList()
-        outputBufferList.mNumberBuffers = 1
-        outputBufferList.mBuffers.mNumberChannels = outputFormat.channelCount
-        outputBufferList.mBuffers.mDataByteSize = outputFrames * outputFormat.streamDescription.pointee.mBytesPerFrame
-        outputBufferList.mBuffers.mData = pcmBuffer.floatChannelData?.pointee
-
         var framesToConvert = outputFrames
         
         var contextInfo = DecoderContext(streamer: self)
-        let status = AudioConverterFillComplexBuffer(converter, complexInputDataProc, &contextInfo, &framesToConvert, &outputBufferList, nil)
+        let status = AudioConverterFillComplexBuffer(converter, complexInputDataProc, &contextInfo, &framesToConvert, pcmBuffer.mutableAudioBufferList, nil)
         
         if status == noErr && framesToConvert > 0 {
             pcmBuffer.frameLength = framesToConvert

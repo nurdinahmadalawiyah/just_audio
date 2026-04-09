@@ -106,8 +106,9 @@ class Player {
             // add mainMixerNode
             nodes.append(engine.mainMixerNode)
 
+            let defaultFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)
             for i in 1 ..< nodes.count {
-                engine.connect(nodes[i - 1]!, to: nodes[i]!, format: nil)
+                engine.connect(nodes[i - 1]!, to: nodes[i]!, format: defaultFormat)
             }
 
             // Observe for changes in the audio engine configuration
