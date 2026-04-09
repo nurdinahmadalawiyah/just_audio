@@ -133,6 +133,7 @@ class _JustAudioBackgroundPlugin extends JustAudioPlatform {
     }
     _player = _JustAudioPlayer(
       id: request.id,
+      initRequest: request,
     );
     return _player!;
   }
@@ -165,8 +166,9 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
   int? _androidAudioSessionId;
   late final _PlayerAudioHandler _playerAudioHandler;
 
-  _JustAudioPlayer({required String id}) : super(id) {
-    _playerAudioHandler = _PlayerAudioHandler(id);
+  _JustAudioPlayer({required String id, required InitRequest initRequest})
+      : super(id) {
+    _playerAudioHandler = _PlayerAudioHandler(initRequest);
     _audioHandler.inner = _playerAudioHandler;
     _audioHandler.playbackState.listen((playbackState) {
       broadcastPlaybackEvent();
@@ -357,6 +359,7 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
 
 class _PlayerAudioHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
+  final InitRequest _initRequest;
   final _playerCompleter = Completer<AudioPlayerPlatform>();
   PlaybackEventMessage _justAudioEvent = PlaybackEventMessage(
     processingState: ProcessingStateMessage.idle,
@@ -386,12 +389,12 @@ class _PlayerAudioHandler extends BaseAudioHandler
 
   List<MediaItem>? get currentQueue => queue.nvalue;
 
-  _PlayerAudioHandler(String playerId) {
-    _init(playerId);
+  _PlayerAudioHandler(this._initRequest) {
+    _init();
   }
 
-  Future<void> _init(String playerId) async {
-    final player = await _platform.init(InitRequest(id: playerId));
+  Future<void> _init() async {
+    final player = await _platform.init(_initRequest);
     _playerCompleter.complete(player);
     final playbackEventMessageStream = player.playbackEventMessageStream;
     playbackEventMessageStream.listen((event) {
