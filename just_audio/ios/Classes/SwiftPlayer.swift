@@ -18,6 +18,8 @@ internal class SwiftPlayer: NSObject {
     private var engine: AVAudioEngine!
     private var equalizer: Equalizer?
     private var shouldWriteOutputToFile: Bool = false
+    private var pendingPlay: Bool = false
+    private var hasLoadedAudioSource: Bool = false
 
     var cancellables: [AnyCancellable] = []
 
@@ -131,10 +133,15 @@ internal class SwiftPlayer: NSObject {
             case .load:
                 try onLoad(request: request)
             case .play:
+                if !hasLoadedAudioSource {
+                    pendingPlay = true
+                    return
+                }
                 try player.play()
             case .pause:
                 player.pause()
             case .stop:
+                pendingPlay = false
                 player.stop()
             case .seek:
                 let time = Util.timeFrom(microseconds: request["position"] as! Int64)
@@ -165,6 +172,8 @@ internal class SwiftPlayer: NSObject {
                 // android is still to be implemented too
                 throw SwiftJustAudioPluginError.notImplementedError(message: call.method)
             case .dispose:
+                pendingPlay = false
+                hasLoadedAudioSource = false
                 player.stop()
             case .concatenatingInsertAll:
 
@@ -340,12 +349,17 @@ extension SwiftPlayer {
 @available(iOS 13.0, *)
 extension SwiftPlayer {
     func onLoad(request: [String: Any?]) throws {
+        let shouldAutoPlay = pendingPlay || player.isPlaying
+        pendingPlay = false
+
         let (effects, audioSequence) = try FlutterAudioSourceType.parseAudioSequenceFrom(map: request)
+        player.stop()
         player.resetQueue()
         player.addAudioSource(audioSequence)
         if let initialIndex = request["initialIndex"] as? Int {
             player.setInitialIndex(initialIndex)
         }
+        hasLoadedAudioSource = true
 
         audioSourcesAudioEffects = effects.reduce(into: audioSourcesAudioEffects) { partialResult, audioEffectWithId in
             let (id, effect) = audioEffectWithId
@@ -353,6 +367,10 @@ extension SwiftPlayer {
         }
 
         try onSetShuffleOrder(request: request)
+
+        if shouldAutoPlay {
+            try player.play()
+        }
     }
 
     func onSetShuffleOrder(request: [String: Any?]) throws {
