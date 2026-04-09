@@ -6,7 +6,7 @@ import UIKit
 public class SwiftJustAudioPlugin: NSObject, FlutterPlugin {
     var players: [String: SwiftPlayer] = [:]
     let registrar: FlutterPluginRegistrar
-    let engine: AVAudioEngine!
+    var engine: AVAudioEngine!
     let errorsChannel: BetterEventChannel
 
     init(registrar: FlutterPluginRegistrar) {
@@ -100,10 +100,13 @@ extension SwiftJustAudioPlugin {
             return
         }
 
-        if let player = players[id] {
+        if let player = players.removeValue(forKey: id) {
             player.dispose()
-            players.removeValue(forKey: id)?.dispose()
+        }
+        if players.isEmpty {
             engine.stop()
+            engine.reset()
+            engine = AVAudioEngine()
         }
     }
 
@@ -111,5 +114,7 @@ extension SwiftJustAudioPlugin {
         players.forEach { _, player in player.dispose() }
         players.removeAll()
         engine.stop()
+        engine.reset()
+        engine = AVAudioEngine()
     }
 }
