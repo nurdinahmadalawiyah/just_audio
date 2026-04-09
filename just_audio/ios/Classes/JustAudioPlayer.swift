@@ -162,6 +162,11 @@ public class JustAudioPlayer {
      * If the player is already playing, calling this method will result in a no-op
      */
     public func play() throws {
+        if processingState == .none {
+            try scheduleAudioSource()
+            return
+        }
+
         guard let node = mainPlayer.playerNode else {
             try scheduleAudioSource()
             return
@@ -189,17 +194,18 @@ public class JustAudioPlayer {
     }
 
     /**
-     * Stops the player, looses the queue and the current index
+     * Stops the player, releasing resources while retaining the current queue.
      */
     public func stop() {
+        // Preserve the current index so that a subsequent play resumes this item
+        if let currentIndex = queueIndex {
+            pendingInitialIndex = currentIndex
+        }
+
         processingState = .none
         mainPlayer.stopStreamingRemoteAudio()
         mainPlayer.playerNode?.stop()
         engine.stop()
-        queueManager.clear()
-        queueIndex = 0
-        unsubscribeUpdates()
-        equalizer = nil
         isPlaying = false
     }
 

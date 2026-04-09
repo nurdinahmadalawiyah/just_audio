@@ -255,7 +255,8 @@ class AudioStreamEngine: AudioEngine {
 
     private func updateNetworkBufferRange() { // for ui
         let range = converter.pollNetworkAudioAvailabilityRange()
-        isPlayable = (numberOfBuffersScheduledInTotal >= MIN_BUFFERS_TO_BE_PLAYABLE && range.1 > 0) && predictedStreamDuration > 0
+        // Allow playback even if the stream duration is unknown (e.g., live streams).
+        isPlayable = numberOfBuffersScheduledInTotal >= MIN_BUFFERS_TO_BE_PLAYABLE && range.1 > 0
         Log.debug("loaded \(range), numberOfBuffersScheduledInTotal: \(numberOfBuffersScheduledInTotal), isPlayable: \(isPlayable)")
         bufferedSeconds = SAAudioAvailabilityRange(startingNeedle: range.0, durationLoadedByNetwork: range.1, predictedDurationToLoad: predictedStreamDuration, isPlayable: isPlayable)
     }
