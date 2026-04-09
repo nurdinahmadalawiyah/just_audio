@@ -100,6 +100,11 @@ public class JustAudioPlayer {
 
     private var queueManager = AudioSequenceQueueManager()
 
+    /// Number of audio sources currently in the queue.
+    public var queueCount: Int {
+        return queueManager.count
+    }
+
     // MARK: - Notification subscriptions
 
     private var playingStatusSubscription: UInt?
@@ -414,6 +419,10 @@ public class JustAudioPlayer {
      */
     private func scheduleAudioSource() throws {
         isPlaying = false
+        if queueManager.count == 0 {
+            processingState = .none
+            return
+        }
         if let initialIndex = pendingInitialIndex {
             pendingInitialIndex = nil
             if queueManager.contains(initialIndex) {

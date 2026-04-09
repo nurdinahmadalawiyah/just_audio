@@ -133,7 +133,7 @@ internal class SwiftPlayer: NSObject {
             case .load:
                 try onLoad(request: request)
             case .play:
-                if !hasLoadedAudioSource {
+                if !hasLoadedAudioSource || player.queueCount == 0 {
                     pendingPlay = true
                     return
                 }
