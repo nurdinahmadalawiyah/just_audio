@@ -43,6 +43,7 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
     
     func stop() {
         dataTask?.cancel()
+        session.invalidateAndCancel()
         isPlaying = false
         if let stream = streamID {
             AudioFileStreamClose(stream)
