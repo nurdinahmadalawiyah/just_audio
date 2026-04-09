@@ -1026,6 +1026,11 @@ class AudioPlayer {
   /// decoders alive so that the app can quickly resume audio playback.
   Future<void> stop() async {
     if (_disposed) return;
+    try {
+      await (await _platform).stop(StopRequest());
+    } catch (_) {
+      // Ignore if stop isn't implemented on this platform.
+    }
     final future =
         _setPlatformActive(false)?.catchError((dynamic e) async => null);
 

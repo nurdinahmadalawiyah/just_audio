@@ -320,6 +320,39 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
     return await _playerAudioHandler
         .customSetAutomaticallyWaitsToMinimizeStalling(request);
   }
+
+  @override
+  Future<AudioEffectSetEnabledResponse> audioEffectSetEnabled(
+      AudioEffectSetEnabledRequest request) async {
+    return await _playerAudioHandler.customAudioEffectSetEnabled(request);
+  }
+
+  @override
+  Future<AndroidEqualizerGetParametersResponse> androidEqualizerGetParameters(
+      AndroidEqualizerGetParametersRequest request) async {
+    return await _playerAudioHandler.customAndroidEqualizerGetParameters(
+        request);
+  }
+
+  @override
+  Future<AndroidEqualizerBandSetGainResponse> androidEqualizerBandSetGain(
+      AndroidEqualizerBandSetGainRequest request) async {
+    return await _playerAudioHandler.customAndroidEqualizerBandSetGain(request);
+  }
+
+  @override
+  Future<AndroidLoudnessEnhancerSetTargetGainResponse>
+      androidLoudnessEnhancerSetTargetGain(
+          AndroidLoudnessEnhancerSetTargetGainRequest request) async {
+    return await _playerAudioHandler
+        .customAndroidLoudnessEnhancerSetTargetGain(request);
+  }
+
+  @override
+  Future<DarwinEqualizerBandSetGainResponse> darwinEqualizerBandSetGain(
+      DarwinEqualizerBandSetGainRequest request) async {
+    return await _playerAudioHandler.customDarwinEqualizerBandSetGain(request);
+  }
 }
 
 class _PlayerAudioHandler extends BaseAudioHandler
@@ -490,6 +523,34 @@ class _PlayerAudioHandler extends BaseAudioHandler
           SetAutomaticallyWaitsToMinimizeStallingRequest request) async {
     return await (await _player)
         .setAutomaticallyWaitsToMinimizeStalling(request);
+  }
+
+  Future<AudioEffectSetEnabledResponse> customAudioEffectSetEnabled(
+      AudioEffectSetEnabledRequest request) async {
+    return await (await _player).audioEffectSetEnabled(request);
+  }
+
+  Future<AndroidEqualizerGetParametersResponse>
+      customAndroidEqualizerGetParameters(
+          AndroidEqualizerGetParametersRequest request) async {
+    return await (await _player).androidEqualizerGetParameters(request);
+  }
+
+  Future<AndroidEqualizerBandSetGainResponse>
+      customAndroidEqualizerBandSetGain(
+          AndroidEqualizerBandSetGainRequest request) async {
+    return await (await _player).androidEqualizerBandSetGain(request);
+  }
+
+  Future<AndroidLoudnessEnhancerSetTargetGainResponse>
+      customAndroidLoudnessEnhancerSetTargetGain(
+          AndroidLoudnessEnhancerSetTargetGainRequest request) async {
+    return await (await _player).androidLoudnessEnhancerSetTargetGain(request);
+  }
+
+  Future<DarwinEqualizerBandSetGainResponse> customDarwinEqualizerBandSetGain(
+      DarwinEqualizerBandSetGainRequest request) async {
+    return await (await _player).darwinEqualizerBandSetGain(request);
   }
 
   Future<void> _updateQueue() async {

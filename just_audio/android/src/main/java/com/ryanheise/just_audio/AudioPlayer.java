@@ -425,6 +425,10 @@ public class AudioPlayer implements MethodCallHandler, Player.Listener, Metadata
                 pause();
                 result.success(new HashMap<String, Object>());
                 break;
+            case "stop":
+                stop();
+                result.success(new HashMap<String, Object>());
+                break;
             case "setVolume":
                 setVolume((float) ((double) ((Double) call.argument("volume"))));
                 result.success(new HashMap<String, Object>());
@@ -932,6 +936,18 @@ public class AudioPlayer implements MethodCallHandler, Player.Listener, Metadata
             playResult.success(new HashMap<String, Object>());
             playResult = null;
         }
+    }
+
+    public void stop() {
+        if (player == null) return;
+        player.stop();
+        updatePosition();
+        processingState = ProcessingState.none;
+        if (playResult != null) {
+            playResult.success(new HashMap<String, Object>());
+            playResult = null;
+        }
+        broadcastImmediatePlaybackEvent();
     }
 
     public void setVolume(final float volume) {

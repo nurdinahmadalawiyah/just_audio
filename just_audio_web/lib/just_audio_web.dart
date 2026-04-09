@@ -286,6 +286,15 @@ class Html5AudioPlayer extends JustAudioPlayer {
   }
 
   @override
+  Future<StopResponse> stop(StopRequest request) async {
+    if (!_playing) return StopResponse();
+    _playing = false;
+    await _currentAudioSourcePlayer?.pause();
+    transition(ProcessingStateMessage.idle);
+    return StopResponse();
+  }
+
+  @override
   Future<SetVolumeResponse> setVolume(SetVolumeRequest request) async {
     _audioElement.volume = request.volume;
     return SetVolumeResponse();

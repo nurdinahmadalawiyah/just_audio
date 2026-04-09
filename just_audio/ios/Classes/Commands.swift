@@ -29,6 +29,7 @@ enum SwiftPlayerCommand: String {
     case load
     case play
     case pause
+    case stop
     case seek
     case setVolume
     case setSpeed

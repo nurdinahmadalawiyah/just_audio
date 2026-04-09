@@ -91,6 +91,11 @@ abstract class AudioPlayerPlatform {
     throw UnimplementedError("pause() has not been implemented.");
   }
 
+  /// Stops playback and releases platform resources for this player.
+  Future<StopResponse> stop(StopRequest request) {
+    throw UnimplementedError("stop() has not been implemented.");
+  }
+
   /// Changes the volume.
   Future<SetVolumeResponse> setVolume(SetVolumeRequest request) {
     throw UnimplementedError("setVolume() has not been implemented.");
@@ -597,6 +602,17 @@ class PauseRequest {
 /// Information returned by the platform implementation after pausing playback.
 class PauseResponse {
   static PauseResponse fromMap(Map<dynamic, dynamic> map) => PauseResponse();
+}
+
+/// Information communicated to the platform implementation when stopping
+/// playback.
+class StopRequest {
+  Map<dynamic, dynamic> toMap() => <dynamic, dynamic>{};
+}
+
+/// Information returned by the platform implementation after stopping playback.
+class StopResponse {
+  static StopResponse fromMap(Map<dynamic, dynamic> map) => StopResponse();
 }
 
 /// Information communicated to the platform implementation when setting the
