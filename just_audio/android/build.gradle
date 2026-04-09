@@ -27,6 +27,7 @@ project.getTasks().withType(JavaCompile) {
 apply plugin: 'com.android.library'
 
 android {
+    namespace "com.ryanheise.just_audio"
     compileSdkVersion 31
 
     defaultConfig {
