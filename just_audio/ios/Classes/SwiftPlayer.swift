@@ -341,7 +341,11 @@ extension SwiftPlayer {
 extension SwiftPlayer {
     func onLoad(request: [String: Any?]) throws {
         let (effects, audioSequence) = try FlutterAudioSourceType.parseAudioSequenceFrom(map: request)
+        player.resetQueue()
         player.addAudioSource(audioSequence)
+        if let initialIndex = request["initialIndex"] as? Int {
+            player.setInitialIndex(initialIndex)
+        }
 
         audioSourcesAudioEffects = effects.reduce(into: audioSourcesAudioEffects) { partialResult, audioEffectWithId in
             let (id, effect) = audioEffectWithId

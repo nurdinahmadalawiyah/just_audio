@@ -62,6 +62,7 @@ public class JustAudioPlayer {
 
     /// tracks which track is being reproduced (currentIndexStream)
     @Published public private(set) var queueIndex: Int?
+    private var pendingInitialIndex: Int?
 
     /// equalizer node, allows to provide presets
     @Published public private(set) var equalizer: Equalizer?
@@ -120,6 +121,21 @@ public class JustAudioPlayer {
     public func addAudioSource(_ sequence: AudioSequence) {
         queueManager.addAll(sources: [sequence])
         processingState = .ready
+    }
+
+    /// Clears the current queue without dropping audio effects.
+    public func resetQueue() {
+        mainPlayer.stopStreamingRemoteAudio()
+        mainPlayer.playerNode?.stop()
+        queueManager.clear()
+        queueIndex = nil
+        processingState = .ready
+        isPlaying = false
+    }
+
+    /// Sets the initial index to be used on the next play.
+    public func setInitialIndex(_ index: Int?) {
+        pendingInitialIndex = index
     }
 
     public func removeAudioSource(at index: Int) throws {
@@ -392,6 +408,15 @@ public class JustAudioPlayer {
      */
     private func scheduleAudioSource() throws {
         isPlaying = false
+        if let initialIndex = pendingInitialIndex {
+            pendingInitialIndex = nil
+            if queueManager.contains(initialIndex) {
+                processingState = .loading
+                queueIndex = initialIndex
+                play(track: try queueManager.element(at: initialIndex))
+                return
+            }
+        }
         if queueManager.count == 1 {
             processingState = .loading
             play(track: try queueManager.element(at: 0))
