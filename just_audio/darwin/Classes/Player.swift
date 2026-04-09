@@ -149,6 +149,8 @@ class Player {
 
     func stop() {
         stopPlayerNode()
+        currentSource?.stop()
+        processingState = .none
         updatePosition(nil)
         broadcastPlaybackEvent()
     }

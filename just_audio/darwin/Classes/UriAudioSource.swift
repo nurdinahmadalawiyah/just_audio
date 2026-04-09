@@ -74,6 +74,11 @@ class UriAudioSource: IndexedAudioSource, NetworkAudioStreamerDelegate {
     override func getDuration() -> CMTime {
         return duration
     }
+    
+    override func stop() {
+        streamer?.stop()
+        streamer = nil
+    }
 
     static func durationFrom(audioFile: AVAudioFile) -> CMTime {
         let seconds = Double(audioFile.length) / audioFile.fileFormat.sampleRate

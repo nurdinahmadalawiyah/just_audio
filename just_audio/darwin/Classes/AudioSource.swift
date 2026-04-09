@@ -14,6 +14,10 @@ class AudioSource {
     func getShuffleIndices() -> [Int] {
         return []
     }
+    
+    func stop() {
+        // Base implementation does nothing
+    }
 
     static func fromListJson(_ data: [[String: Any]]) throws -> [AudioSource] {
         return try data.map { item in
