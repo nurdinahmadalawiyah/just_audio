@@ -617,8 +617,8 @@ public class JustAudioPlayer {
             // following code is not so elegant, and fragile. It can probably benefit of a refactor where we enhance
             // the coordination of the statuses of the player and move them to a own class
             var subId: UInt?
-            subId = mainPlayer.updates.streamingBuffer.subscribe {
-                guard let subscription = subId else {
+            subId = mainPlayer.updates.streamingBuffer.subscribe { [weak self] in
+                guard let self = self, let subscription = subId else {
                     return
                 }
 

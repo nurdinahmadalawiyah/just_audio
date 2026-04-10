@@ -109,8 +109,8 @@ internal class SwiftPlayer: NSObject {
 
         super.init()
 
-        methodChannel.setMethodCallHandler { call, result in
-            self.handleMethodCall(call: call, result: result)
+        methodChannel.setMethodCallHandler { [weak self] call, result in
+            self?.handleMethodCall(call: call, result: result)
         }
     }
 
