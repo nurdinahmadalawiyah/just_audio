@@ -21,6 +21,7 @@ class Player {
     var processingState: ProcessingState = .none
     var shuffleModeEnabled = false
     var loopMode: LoopMode = .loopOff
+    var playWhenReady = false
 
     // Queue properties
     var indexedAudioSources: [IndexedAudioSource] = []
@@ -127,6 +128,12 @@ class Player {
         }
 
         processingState = .ready
+        
+        // If play() was called before load(), start playback now
+        if playWhenReady {
+            playerNode.play()
+        }
+        
         broadcastPlaybackEvent()
 
         return duration
@@ -137,26 +144,35 @@ class Player {
     }
 
     func play() {
+        playWhenReady = true
+        
         if processingState == .none || processingState == .completed {
-            // Engine was torn down by stop() — need full reload
+            // Engine was torn down — need full reload
             if engine == nil, let audioSource = audioSource {
                 _ = load(source: audioSource, initialPosition: .zero, initialIndex: index)
-            } else {
+            } else if engine != nil {
                 seek(index: index, position: .zero)
+                playPlayerNode()
             }
+            // If engine is nil and audioSource is nil, load() hasn't been called yet.
+            // playWhenReady flag ensures we'll start playing when load() completes.
+        } else if processingState == .ready {
+            playPlayerNode()
         }
-        playPlayerNode()
         updatePosition(nil)
         broadcastPlaybackEvent()
     }
 
     func pause() {
+        playWhenReady = false
         updatePosition(nil)
         playerNode?.pause()
         broadcastPlaybackEvent()
     }
 
     func stop() {
+        playWhenReady = false
+        stopPlayerNode()
         currentSource?.stop()
         teardownEngine()
         processingState = .none
