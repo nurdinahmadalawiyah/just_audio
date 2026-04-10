@@ -178,6 +178,14 @@ public class JustAudioPlayer {
         }
 
         if node.isPlaying {
+            // If the audio session/engine was externally stopped (e.g., service
+            // teardown), AVAudioPlayerNode may still report playing while the
+            // engine is not running. In that case, restart the engine playback.
+            if !engine.isRunning {
+                processingState = .loading
+                isPlaying = false
+                mainPlayer.play()
+            }
             return
         } else if processingState == .completed {
             try scheduleAudioSource()
