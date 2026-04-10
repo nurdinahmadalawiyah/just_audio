@@ -53,14 +53,6 @@ class UriAudioSource: IndexedAudioSource, NetworkAudioStreamerDelegate {
     func streamer(_ streamer: NetworkAudioStreamer, didDecodeBuffer buffer: AVAudioPCMBuffer) {
         guard let playerNode = currentPlayerNode else { return }
         playerNode.scheduleBuffer(buffer, completionHandler: nil)
-        
-        // If this is the first buffer, trigger the completion handler so player logic can proceed
-        if self.onPlayerLoaded != nil {
-            DispatchQueue.main.async {
-                self.onPlayerLoaded?()
-                self.onPlayerLoaded = nil
-            }
-        }
     }
     
     func streamerDidFinishDecoding(_ streamer: NetworkAudioStreamer) {

@@ -139,9 +139,8 @@ class Player {
     func play() {
         if processingState == .none || processingState == .completed {
             seek(index: index, position: .zero)
-        } else {
-            playPlayerNode()
         }
+        playPlayerNode()
         updatePosition(nil)
         broadcastPlaybackEvent()
     }
