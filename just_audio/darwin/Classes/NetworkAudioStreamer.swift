@@ -14,13 +14,14 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
     weak var delegate: NetworkAudioStreamerDelegate?
     let url: URL
     
-    private var session: URLSession!
+    private var session: URLSession?
     private var dataTask: URLSessionDataTask?
     
     private var streamID: AudioFileStreamID?
     private var converter: AudioConverterRef?
     private var inputFormat = AudioStreamBasicDescription()
     private var isPlaying = false
+    private var isStopped = false
     
     private var packetData = [Data]()
     private var packetDescriptions = [AudioStreamPacketDescription]()
@@ -32,19 +33,24 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
         // Default output to standard PCM buffer format
         self.outputFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2)!
         super.init()
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: DispatchQueue(label: "NetworkAudioStreamerQueue"))
     }
     
     func start() {
+        isStopped = false
+        let session = URLSession(configuration: .default, delegate: self, delegateQueue: DispatchQueue(label: "NetworkAudioStreamerQueue"))
+        self.session = session
         dataTask = session.dataTask(with: url)
         dataTask?.resume()
         isPlaying = true
     }
     
     func stop() {
-        dataTask?.cancel()
-        session.invalidateAndCancel()
+        isStopped = true
         isPlaying = false
+        dataTask?.cancel()
+        dataTask = nil
+        session?.invalidateAndCancel()
+        session = nil
         if let stream = streamID {
             AudioFileStreamClose(stream)
             streamID = nil
@@ -53,11 +59,15 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
             AudioConverterDispose(conv)
             converter = nil
         }
+        packetData.removeAll()
+        packetDescriptions.removeAll()
     }
     
     // MARK: - URLSessionDataDelegate
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard !isStopped else { return }
+        
         if streamID == nil {
             let context = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
             AudioFileStreamOpen(context, propertyListenerProc, packetsProc, 0, &streamID)
@@ -138,7 +148,8 @@ class NetworkAudioStreamer: NSObject, URLSessionDataDelegate {
         
         if status == noErr && framesToConvert > 0 {
             pcmBuffer.frameLength = framesToConvert
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, !self.isStopped else { return }
                 self.delegate?.streamer(self, didDecodeBuffer: pcmBuffer)
             }
         }

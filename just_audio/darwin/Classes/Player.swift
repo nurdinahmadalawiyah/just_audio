@@ -138,7 +138,12 @@ class Player {
 
     func play() {
         if processingState == .none || processingState == .completed {
-            seek(index: index, position: .zero)
+            // Engine was torn down by stop() — need full reload
+            if engine == nil, let audioSource = audioSource {
+                _ = load(source: audioSource, initialPosition: .zero, initialIndex: index)
+            } else {
+                seek(index: index, position: .zero)
+            }
         }
         playPlayerNode()
         updatePosition(nil)
@@ -147,19 +152,35 @@ class Player {
 
     func pause() {
         updatePosition(nil)
-        playerNode.pause()
+        playerNode?.pause()
         broadcastPlaybackEvent()
     }
 
     func stop() {
-        stopPlayerNode()
         currentSource?.stop()
+        teardownEngine()
         processingState = .none
-        updatePosition(nil)
+        updatePosition(CMTime.zero)
         broadcastPlaybackEvent()
     }
 
+    /// Fully tears down the audio engine and all nodes so they can be recreated fresh.
+    private func teardownEngine() {
+        playerNode?.stop()
+        engine?.stop()
+        if let playerNode = playerNode { engine?.detach(playerNode) }
+        if let speedControl = speedControl { engine?.detach(speedControl) }
+        if let pitchControl = pitchControl { engine?.detach(pitchControl) }
+        if let eq = audioUnitEQ { engine?.detach(eq) }
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVAudioEngineConfigurationChange, object: nil)
+        engine = nil
+        playerNode = nil
+        speedControl = nil
+        pitchControl = nil
+    }
+
     func resume() {
+        guard let playerNode = playerNode, let engine = engine else { return }
         let wasPlaying = playerNode.isPlaying
 
         playerNode.pause()
@@ -173,6 +194,7 @@ class Player {
     }
 
     func seek(index: Int?, position: CMTime) {
+        guard let playerNode = playerNode else { return }
         let wasPlaying = playerNode.isPlaying
 
         if let index = index {
@@ -198,18 +220,19 @@ class Player {
     func updatePosition(_ positionUpdate: CMTime?) {
         positionUpdatedAt = Int64(Date().timeIntervalSince1970 * 1000)
         if let positionUpdate = positionUpdate { self.positionUpdate = positionUpdate }
-        positionOffset = indexedAudioSources.count > 0 && positionUpdate == nil ? playerNode.currentTime : CMTime.zero
+        positionOffset = indexedAudioSources.count > 0 && positionUpdate == nil ? (playerNode?.currentTime ?? .zero) : CMTime.zero
     }
 
     private var isStopping = false
     // Permit to check if [load(completionHandler)] is called when you force a stop
     private func stopPlayerNode() {
         isStopping = true
-        playerNode.stop()
+        playerNode?.stop()
         isStopping = false
     }
 
     private func playPlayerNode() {
+        guard let engine = engine, let playerNode = playerNode else { return }
         if !engine.isRunning {
             try! engine.start()
         }
@@ -379,13 +402,11 @@ class Player {
     }
 
     func dispose() {
-        if processingState != .none {
-            playerNode?.pause()
-            processingState = .none
-        }
+        currentSource?.stop()
+        teardownEngine()
+        processingState = .none
         audioSource = nil
         indexedAudioSources = []
-        playerNode?.stop()
-        engine?.stop()
+        currentSource = nil
     }
 }

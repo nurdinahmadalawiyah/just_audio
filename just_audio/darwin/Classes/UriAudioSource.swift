@@ -18,14 +18,19 @@ class UriAudioSource: IndexedAudioSource, NetworkAudioStreamerDelegate {
     }
 
     override func load(engine _: AVAudioEngine, playerNode: AVAudioPlayerNode, speedControl _: AVAudioUnitVarispeed, position: CMTime?, completionHandler: @escaping () -> Void) throws {
+        // Clean up any previous streamer before starting a new one
+        streamer?.stop()
+        streamer = nil
+        
         self.onPlayerLoaded = completionHandler
         self.currentPlayerNode = playerNode
         
         let scheme = url.scheme?.lowercased() ?? ""
         if scheme == "http" || scheme == "https" {
-            streamer = NetworkAudioStreamer(url: url)
-            streamer?.delegate = self
-            streamer?.start()
+            let newStreamer = NetworkAudioStreamer(url: url)
+            newStreamer.delegate = self
+            self.streamer = newStreamer
+            newStreamer.start()
         } else {
             let audioFile = try! AVAudioFile(forReading: url)
             let audioFormat = audioFile.fileFormat
@@ -51,12 +56,12 @@ class UriAudioSource: IndexedAudioSource, NetworkAudioStreamerDelegate {
     // MARK: NetworkAudioStreamerDelegate
     
     func streamer(_ streamer: NetworkAudioStreamer, didDecodeBuffer buffer: AVAudioPCMBuffer) {
-        guard let playerNode = currentPlayerNode else { return }
+        guard let playerNode = currentPlayerNode, streamer === self.streamer else { return }
         playerNode.scheduleBuffer(buffer, completionHandler: nil)
     }
     
     func streamerDidFinishDecoding(_ streamer: NetworkAudioStreamer) {
-        // Nothing special. Buffer schedule handles the end.
+        // Nothing special for live streams. Buffer schedule handles the end.
     }
     
     func streamer(_ streamer: NetworkAudioStreamer, didFailWithError error: Error) {
@@ -68,6 +73,7 @@ class UriAudioSource: IndexedAudioSource, NetworkAudioStreamerDelegate {
     }
     
     override func stop() {
+        currentPlayerNode = nil
         streamer?.stop()
         streamer = nil
     }
