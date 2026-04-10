@@ -206,6 +206,10 @@ class AudioEngine: AudioEngineProtocol {
         // https://stackoverflow.com/questions/36754934/update-mpremotecommandcenter-play-pause-button
         if !(engine.isRunning) {
             do {
+                // After external stops (e.g. service teardown), AVAudioEngine can
+                // remain in a stale state where start() succeeds but audio is silent.
+                // Resetting ensures the graph is ready for a fresh start.
+                engine.reset()
                 try engine.start()
 
             } catch {
