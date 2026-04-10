@@ -617,18 +617,26 @@ public class JustAudioPlayer {
             // following code is not so elegant, and fragile. It can probably benefit of a refactor where we enhance
             // the coordination of the statuses of the player and move them to a own class
             var subId: UInt?
-            subId = mainPlayer.updates.streamingBuffer.subscribe { [weak self] in
-                guard let self = self, let subscription = subId else {
-                    return
-                }
+            var didFireSynchronously = false
 
-                let remoteCanPlay = $0.totalDurationBuffered > audioSource.startingTime && $0.isReadyForPlaying
+            subId = mainPlayer.updates.streamingBuffer.subscribe { [weak self] buffer in
+                guard let self = self else { return }
+
+                let remoteCanPlay = buffer.totalDurationBuffered > audioSource.startingTime && buffer.isReadyForPlaying
                 let localCanPlay = audioSource.isLocal
 
                 if remoteCanPlay || localCanPlay {
-                    self.mainPlayer.updates.streamingBuffer.unsubscribe(subscription)
+                    if let subscription = subId {
+                        self.mainPlayer.updates.streamingBuffer.unsubscribe(subscription)
+                    } else {
+                        didFireSynchronously = true
+                    }
                     actWhenAudioSourceIsReady()
                 }
+            }
+
+            if didFireSynchronously, let subscription = subId {
+                self.mainPlayer.updates.streamingBuffer.unsubscribe(subscription)
             }
         }
     }
