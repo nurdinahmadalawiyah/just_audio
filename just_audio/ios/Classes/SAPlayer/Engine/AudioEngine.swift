@@ -210,6 +210,11 @@ class AudioEngine: AudioEngineProtocol {
                 // remain in a stale state where start() succeeds but audio is silent.
                 // However, engine.reset() clears all scheduled buffers on playerNode,
                 // causing silent playback. Removing it allows buffers to persist.
+                let wasPlaying = playerNode.isPlaying
+                if wasPlaying {
+                    playerNode.pause()
+                }
+                
                 try engine.start()
 
             } catch {
@@ -244,6 +249,10 @@ class AudioEngine: AudioEngineProtocol {
         if let audioModifiers = audioModifiers, audioModifiers.count > 0 {
             audioModifiers.forEach { engine.detach($0) }
         }
+        
+        engine.disconnectNodeInput(self.playerNode)
+        engine.detach(self.playerNode)
+        
         Log.info("invalidated engine for key \(key)")
     }
 }
