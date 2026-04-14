@@ -247,7 +247,10 @@ class AudioEngine: AudioEngineProtocol {
         playerNode.stop()
 
         if let audioModifiers = audioModifiers, audioModifiers.count > 0 {
-            audioModifiers.forEach { engine.detach($0) }
+            audioModifiers.forEach { 
+                $0.reset()
+                engine.detach($0) 
+            }
         }
         
         engine.disconnectNodeInput(self.playerNode)

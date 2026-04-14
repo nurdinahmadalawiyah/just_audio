@@ -178,6 +178,14 @@ class AudioParser: AudioParsable {
         guard AudioFileStreamOpen(context, ParserPropertyListener, ParserPacketListener, kAudioFileMP3Type, &streamID) == noErr else {
             throw ParserError.couldNotOpenStream
         }
+        
+        // Kick-start parsing immediately in case the audio is already fully cached/downloaded
+        // and no progress events will be broadcasted by the streamingDownloadDirector.
+        self.lockQueue.sync {
+            if self.fileAudioFormat == nil {
+                self.processNextDataPacket()
+            }
+        }
     }
 
     deinit {
