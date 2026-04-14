@@ -16,7 +16,6 @@ A new flutter plugin project.
   s.source_files = 'Classes/**/*'
 
   s.dependency 'Flutter'
-  s.dependency 'AudioStreamer', '~> 2.6'
   s.platform = :ios, '13.0'
 
   # Flutter.framework does not contain a i386 slice.
