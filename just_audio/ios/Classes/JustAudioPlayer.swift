@@ -218,7 +218,6 @@ public class JustAudioPlayer {
         processingState = .none
         mainPlayer.stopStreamingRemoteAudio()
         mainPlayer.playerNode?.stop()
-        engine.stop()
         isPlaying = false
     }
 
