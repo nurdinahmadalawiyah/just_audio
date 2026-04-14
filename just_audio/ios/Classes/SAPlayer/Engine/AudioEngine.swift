@@ -156,11 +156,13 @@ class AudioEngine: AudioEngineProtocol {
 
     deinit {
         if state == .resumed {
-            playerNode.stop()
+            playerNode?.stop()
         }
 
-        engine.disconnectNodeInput(self.playerNode)
-        engine.detach(self.playerNode)
+        if let node = playerNode, node.engine != nil {
+            engine.disconnectNodeInput(node)
+            engine.detach(node)
+        }
 
         playerNode = nil
         Log.info("deinit AVAudioEngine for \(key)")
@@ -244,17 +246,21 @@ class AudioEngine: AudioEngineProtocol {
 
     func invalidate() {
         engineInvalidated = true
-        playerNode.stop()
+        playerNode?.stop()
 
         if let audioModifiers = audioModifiers, audioModifiers.count > 0 {
             audioModifiers.forEach { 
                 $0.reset()
-                engine.detach($0) 
+                if $0.engine != nil {
+                    engine.detach($0) 
+                }
             }
         }
         
-        engine.disconnectNodeInput(self.playerNode)
-        engine.detach(self.playerNode)
+        if let node = playerNode, node.engine != nil {
+            engine.disconnectNodeInput(node)
+            engine.detach(node)
+        }
         
         Log.info("invalidated engine for key \(key)")
     }

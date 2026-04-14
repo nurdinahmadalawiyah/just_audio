@@ -130,8 +130,8 @@ public class JustAudioPlayer {
 
     /// Clears the current queue without dropping audio effects.
     public func resetQueue() {
-        mainPlayer.stopStreamingRemoteAudio()
-        mainPlayer.playerNode?.stop()
+        unsubscribeUpdates()
+        mainPlayer.clear()
         queueManager.clear()
         queueIndex = nil
         processingState = .ready
@@ -167,30 +167,34 @@ public class JustAudioPlayer {
      * If the player is already playing, calling this method will result in a no-op
      */
     public func play() throws {
+        print("🔵 [JustAudioPlayer] play() called — processingState=\(processingState), queueCount=\(queueCount), playerNode=\(String(describing: mainPlayer.playerNode))")
         if processingState == .none {
+            print("🔵 [JustAudioPlayer] play() → processingState is .none, calling scheduleAudioSource()")
             try scheduleAudioSource()
             return
         }
 
         guard let node = mainPlayer.playerNode else {
+            print("🔵 [JustAudioPlayer] play() → playerNode is nil, calling scheduleAudioSource()")
             try scheduleAudioSource()
             return
         }
 
         if node.isPlaying {
-            // If the audio session/engine was externally stopped (e.g., service
-            // teardown), AVAudioPlayerNode may still report playing while the
-            // engine is not running. In that case, restart the engine playback.
             if !engine.isRunning {
+                print("🔵 [JustAudioPlayer] play() → node.isPlaying but engine NOT running, restarting")
                 processingState = .loading
                 isPlaying = false
                 mainPlayer.play()
+            } else {
+                print("🔵 [JustAudioPlayer] play() → already playing, no-op")
             }
             return
         } else if processingState == .completed {
+            print("🔵 [JustAudioPlayer] play() → completed, calling scheduleAudioSource()")
             try scheduleAudioSource()
         } else {
-            // player node is in pause
+            print("🔵 [JustAudioPlayer] play() → node paused, calling mainPlayer.play()")
             processingState = .loading
             isPlaying = false
             mainPlayer.play()
@@ -210,15 +214,20 @@ public class JustAudioPlayer {
      * Stops the player, releasing resources while retaining the current queue.
      */
     public func stop() {
+        print("🔴 [JustAudioPlayer] stop() called — queueIndex=\(String(describing: queueIndex))")
         // Preserve the current index so that a subsequent play resumes this item
         if let currentIndex = queueIndex {
             pendingInitialIndex = currentIndex
         }
 
         processingState = .none
-        mainPlayer.stopStreamingRemoteAudio()
-        mainPlayer.playerNode?.stop()
+        // Fully clear the old engine to destroy old AudioStreamEngine, its timers,
+        // AudioConverter, AudioParser, and AudioThrottler. Without this, zombie
+        // references from the old engine interfere with the next play cycle.
+        unsubscribeUpdates()
+        mainPlayer.clear()
         isPlaying = false
+        print("🔴 [JustAudioPlayer] stop() completed — engine cleared")
     }
 
     /// seek to a determinate value, default is 10 second forward
@@ -425,14 +434,17 @@ public class JustAudioPlayer {
      * Updates accordingly the `processingState` and `queueIndex` of the player
      */
     private func scheduleAudioSource() throws {
+        print("🟢 [JustAudioPlayer] scheduleAudioSource() — queueCount=\(queueManager.count), pendingInitialIndex=\(String(describing: pendingInitialIndex))")
         isPlaying = false
         if queueManager.count == 0 {
+            print("🟢 [JustAudioPlayer] scheduleAudioSource() → queue empty, setting .none")
             processingState = .none
             return
         }
         if let initialIndex = pendingInitialIndex {
             pendingInitialIndex = nil
             if queueManager.contains(initialIndex) {
+                print("🟢 [JustAudioPlayer] scheduleAudioSource() → using pendingInitialIndex=\(initialIndex)")
                 processingState = .loading
                 queueIndex = initialIndex
                 play(track: try queueManager.element(at: initialIndex))
@@ -440,13 +452,16 @@ public class JustAudioPlayer {
             }
         }
         if queueManager.count == 1 {
+            print("🟢 [JustAudioPlayer] scheduleAudioSource() → single track, playing index 0")
             processingState = .loading
             play(track: try queueManager.element(at: 0))
             queueIndex = 0
-        } else if let track = try tryMoveToNextTrack() { // first time to play a song
+        } else if let track = try tryMoveToNextTrack() {
+            print("🟢 [JustAudioPlayer] scheduleAudioSource() → moved to next track")
             processingState = .loading
             play(track: track)
         } else {
+            print("🟢 [JustAudioPlayer] scheduleAudioSource() → completed, no more tracks")
             processingState = .completed
         }
     }
@@ -564,9 +579,11 @@ public class JustAudioPlayer {
     }
 
     func play(track audioSource: AudioSource) {
+        print("🟡 [JustAudioPlayer] play(track:) — url=\(String(describing: audioSource.audioUrl)), isLocal=\(audioSource.isLocal), type=\(type(of: audioSource))")
         if let url = audioSource.audioUrl {
             // Audio modifiers must be finalized before loading the audio into the player, or they will not be applied
             activateEffects(for: audioSource)
+            print("🟡 [JustAudioPlayer] play(track:) → effects activated, starting audio...")
 
             switch audioSource {
             case let audioSource as ClippingAudioSource:
@@ -587,34 +604,31 @@ public class JustAudioPlayer {
                 mainPlayer.startRemoteAudio(withRemoteUrl: url)
 
             default:
-                // TODO: should we throw?
                 preconditionFailure("Don't know how to play \(audioSource.self)")
             }
+
+            print("🟡 [JustAudioPlayer] play(track:) → audio engine started, playerNode=\(String(describing: mainPlayer.playerNode)), engineRunning=\(engine.isRunning)")
 
             seek(second: audioSource.startingTime)
 
             let actWhenAudioSourceIsReady = {
+                print("🟡 [JustAudioPlayer] actWhenAudioSourceIsReady() → subscribing and calling mainPlayer.play()")
                 self.subscribeToAllSubscriptions()
-
                 self.mainPlayer.play()
             }
 
-            // start to play when we have loaded at least a `audioSource.startingTime` amount of reproducible audio.
-            // When seeking a remote audio before playing it, we receive a set of playingStatus updates that we doo not care for:
             unsubscribeUpdates()
 
-            // buffer updates are not triggered for local audio sources (not seeked)
             if audioSource.isLocal {
+                print("🟡 [JustAudioPlayer] play(track:) → local audio, playing immediately")
                 actWhenAudioSourceIsReady()
                 return
             }
 
-            // notify we're loading the audio source
             isPlaying = false
             processingState = .loading
+            print("🟡 [JustAudioPlayer] play(track:) → remote audio, waiting for buffer...")
 
-            // following code is not so elegant, and fragile. It can probably benefit of a refactor where we enhance
-            // the coordination of the statuses of the player and move them to a own class
             var subId: UInt?
             var didFireSynchronously = false
 
@@ -623,6 +637,7 @@ public class JustAudioPlayer {
 
                 let remoteCanPlay = buffer.totalDurationBuffered > audioSource.startingTime && buffer.isReadyForPlaying
                 let localCanPlay = audioSource.isLocal
+                print("🟡 [JustAudioPlayer] buffer update → totalDurationBuffered=\(buffer.totalDurationBuffered), isReadyForPlaying=\(buffer.isReadyForPlaying), remoteCanPlay=\(remoteCanPlay)")
 
                 if remoteCanPlay || localCanPlay {
                     if let subscription = subId {

@@ -131,16 +131,20 @@ internal class SwiftPlayer: NSObject {
 
             switch command {
             case .load:
+                print("🟣 [SwiftPlayer] handleMethodCall → load")
                 try onLoad(request: request)
             case .play:
+                print("🟣 [SwiftPlayer] handleMethodCall → play, hasLoaded=\(hasLoadedAudioSource), queueCount=\(player.queueCount)")
                 if !hasLoadedAudioSource || player.queueCount == 0 {
                     pendingPlay = true
+                    print("🟣 [SwiftPlayer] handleMethodCall → play deferred (pendingPlay=true)")
                     return
                 }
                 try player.play()
             case .pause:
                 player.pause()
             case .stop:
+                print("🟣 [SwiftPlayer] handleMethodCall → stop")
                 pendingPlay = false
                 player.stop()
             case .seek:
@@ -351,13 +355,18 @@ extension SwiftPlayer {
     func onLoad(request: [String: Any?]) throws {
         let shouldAutoPlay = pendingPlay || player.isPlaying
         pendingPlay = false
+        print("🟣 [SwiftPlayer] onLoad() — shouldAutoPlay=\(shouldAutoPlay), isPlaying=\(player.isPlaying)")
 
         let (effects, audioSequence) = try FlutterAudioSourceType.parseAudioSequenceFrom(map: request)
+        print("🟣 [SwiftPlayer] onLoad() → calling player.stop()")
         player.stop()
+        print("🟣 [SwiftPlayer] onLoad() → calling player.resetQueue()")
         player.resetQueue()
+        print("🟣 [SwiftPlayer] onLoad() → calling player.addAudioSource()")
         player.addAudioSource(audioSequence)
         if let initialIndex = request["initialIndex"] as? Int {
             player.setInitialIndex(initialIndex)
+            print("🟣 [SwiftPlayer] onLoad() → set initialIndex=\(initialIndex)")
         }
         hasLoadedAudioSource = true
 
@@ -369,7 +378,10 @@ extension SwiftPlayer {
         try onSetShuffleOrder(request: request)
 
         if shouldAutoPlay {
+            print("🟣 [SwiftPlayer] onLoad() → shouldAutoPlay=true, calling player.play()")
             try player.play()
+        } else {
+            print("🟣 [SwiftPlayer] onLoad() → shouldAutoPlay=false, NOT auto-playing")
         }
     }
 

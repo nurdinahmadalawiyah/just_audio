@@ -215,6 +215,7 @@ class AudioStreamEngine: AudioEngine {
 
     private func pollForNextBufferRecursive() {
         if !converter.initialized {
+            print("⚪ [AudioStreamEngine] pollForNextBufferRecursive() — converter NOT initialized yet, skipping")
             return
         }
 

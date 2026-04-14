@@ -179,11 +179,42 @@ class AudioParser: AudioParsable {
             throw ParserError.couldNotOpenStream
         }
         
-        // Kick-start parsing immediately in case the audio is already fully cached/downloaded
-        // and no progress events will be broadcasted by the streamingDownloadDirector.
-        self.lockQueue.sync {
-            if self.fileAudioFormat == nil {
-                self.processNextDataPacket()
+        // Kick-start parsing for cached audio data. When audio is cached,
+        // AudioDataManager.startStream() returns data synchronously, but the
+        // AudioThrottler stores it via queue.async (a separate serial queue).
+        // We retry with increasing delays to ensure the throttler has processed
+        // the cached data before we try to parse it. Without this, the parser
+        // would never start because no StreamingDownloadDirector progress events
+        // are broadcasted for cached audio.
+        self.kickStartParsing(attempt: 0)
+    }
+
+    /// Attempts to kick-start parsing for cached audio data by retrying with
+    /// increasing delays. This handles the race condition where the AudioThrottler
+    /// receives cached data via queue.async but the parser tries to read it
+    /// before the async block has executed.
+    private func kickStartParsing(attempt: Int) {
+        let maxAttempts = 3
+        let delays: [Double] = [0.05, 0.15, 0.35] // 50ms, 150ms, 350ms
+        
+        guard attempt < maxAttempts else {
+            Log.debug("kickStartParsing: gave up after \(maxAttempts) attempts - streaming data will trigger parsing via director")
+            return
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delays[attempt]) { [weak self] in
+            guard let self = self else { return }
+            self.lockQueue.sync {
+                if self.fileAudioFormat == nil && self.audioPackets.count == 0 {
+                    Log.debug("kickStartParsing: attempt \(attempt + 1) - trying processNextDataPacket")
+                    self.processNextDataPacket()
+                }
+            }
+            // If parsing still hasn't started, retry with a longer delay
+            self.lockQueue.sync {
+                if self.fileAudioFormat == nil && self.audioPackets.count == 0 {
+                    self.kickStartParsing(attempt: attempt + 1)
+                }
             }
         }
     }

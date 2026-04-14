@@ -549,6 +549,7 @@ extension SAPlayer: SAPlayerDelegate {
     }
 
     internal func startAudioStreamed(withRemoteUrl url: AudioURL, bitrate: SAPlayerBitrate) {
+        print("🟠 [SAPlayer] startAudioStreamed() — url=\(url), creating new AudioStreamEngine")
         player = AudioStreamEngine(
             withRemoteUrl: url,
             delegate: presenter,
@@ -558,19 +559,22 @@ extension SAPlayer: SAPlayerDelegate {
             withStreamingDownloadDirector: streamingDownloadDirector,
             withAudioDataManager: audioDataManager
         )
+        print("🟠 [SAPlayer] startAudioStreamed() — AudioStreamEngine created, playerNode=\(String(describing: player?.playerNode))")
     }
 
     internal func clearEngine() {
+        print("🟠 [SAPlayer] clearEngine() — engineRunning=\(engine.isRunning), player=\(String(describing: player))")
         if engine.isRunning {
-            engine.pause()
+            engine.stop()
         }
         player?.pause()
         player?.invalidate()
         player = nil
-        Log.info("cleared engine")
+        print("🟠 [SAPlayer] clearEngine() completed")
     }
 
     internal func playEngine() {
+        print("🟠 [SAPlayer] playEngine() — player=\(String(describing: player))")
         becomeDeviceAudioPlayer()
         player?.play()
     }
