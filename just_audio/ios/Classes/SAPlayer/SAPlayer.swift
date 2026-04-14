@@ -562,7 +562,7 @@ extension SAPlayer: SAPlayerDelegate {
 
     internal func clearEngine() {
         if engine.isRunning {
-            engine.stop()
+            engine.pause()
         }
         player?.pause()
         player?.invalidate()
