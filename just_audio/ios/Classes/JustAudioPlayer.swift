@@ -739,7 +739,7 @@ private extension JustAudioPlayer {
     }
 
     func subscribeToElapsedTime() {
-        streamingBufferSubscription = mainPlayer.updates.elapsedTime
+        elapsedTimeSubscription = mainPlayer.updates.elapsedTime
             .subscribe { [weak self] elapsedTime in // let's assume this is expressed in seconds
 
                 guard let self = self else { return }
