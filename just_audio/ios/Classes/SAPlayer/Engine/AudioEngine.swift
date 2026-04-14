@@ -208,8 +208,8 @@ class AudioEngine: AudioEngineProtocol {
             do {
                 // After external stops (e.g. service teardown), AVAudioEngine can
                 // remain in a stale state where start() succeeds but audio is silent.
-                // Resetting ensures the graph is ready for a fresh start.
-                engine.reset()
+                // However, engine.reset() clears all scheduled buffers on playerNode,
+                // causing silent playback. Removing it allows buffers to persist.
                 try engine.start()
 
             } catch {
